@@ -5,6 +5,8 @@ import { syncKey } from './_auth.js';
 import { loadKarteikasten, loadVerbMeister } from './_sources.js';
 import { speakToMp3, ttsModels } from './_audio.js';
 import { forwardToSprint } from './tts.js';
+import { makeCues } from './_cues.js';
+import { SPRINT_URL } from './_sources.js';
 
 export const maxDuration = 60;
 
@@ -47,7 +49,7 @@ export default async function handler(req, res) {
     } else {
       lastTtsTest = Date.now();
       const t0 = Date.now();
-      const phrase = 'gehen. geht, ging, ist gegangen.';
+      const phrase = 'verschwenden.\nverschwendet, verschwendete, hat verschwendet.\nSami verschwendete keine Zeit.\nVerschwendet wird hier nichts.\nNichts wird hier verschwendet.';
       try {
         if (ownGemini) {
           const r = await speakToMp3(phrase);
@@ -62,6 +64,25 @@ export default async function handler(req, res) {
       } catch (e) {
         out.tts = { ok: false, error: String(e.message || e), retryAfter: e.retryAfter || 0 };
       }
+    }
+  }
+
+  if (q.cues) {
+    // One sample through the same path the phone uses (own key or SprintDeutsch).
+    const sample = [{ id: 't1', de: 'verschwenden', meaning: 'malgastar, derrochar, desperdiciar, despilfarrar' },
+                    { id: 't2', de: 'abhängen von + Dativ', meaning: 'to depend on' }];
+    try {
+      let r;
+      if (ownGemini) r = await makeCues(sample);
+      else {
+        const resp = await fetch(SPRINT_URL + '/api/recall-cues', { method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-sync-key': key }, body: JSON.stringify({ items: sample }) });
+        r = await resp.json();
+        if (!resp.ok) throw new Error((r && (r.detail || r.error)) || 'HTTP ' + resp.status);
+      }
+      out.cues = { ok: true, model: r.model, result: r.cues };
+    } catch (e) {
+      out.cues = { ok: false, error: String(e.message || e) };
     }
   }
 

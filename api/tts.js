@@ -36,10 +36,10 @@ export default async function handler(req, res) {
 
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
-  const text = String(body && body.text || '').replace(/\s+/g, ' ').trim();
+  const text = String(body && body.text || '').replace(/[^\S\n]+/g, ' ').replace(/ *\n[\n ]*/g, '\n').trim();
   const voice = VOICES.has(body && body.voice) ? body.voice : 'Kore';
   if (!text) return res.status(400).json({ error: 'text required' });
-  if (text.length > 400) return res.status(400).json({ error: 'text too long (max 400 characters)' });
+  if (text.length > 1200) return res.status(400).json({ error: 'text too long (max 1200 characters)' });
 
   if (!process.env.GEMINI_API_KEY) {
     try {
