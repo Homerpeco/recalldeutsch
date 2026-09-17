@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RecallDeutsch</title>
+<meta name="description" content="Spoken verb-recall alarms for Android, fed by Verb Meister and Karteikasten.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 108 108'><rect width='108' height='108' rx='24' fill='%231F4FD8'/><path fill='white' d='M34 32h40a8 8 0 0 1 8 8v22a8 8 0 0 1-8 8H52l-12 10V70h-6a8 8 0 0 1-8-8V40a8 8 0 0 1 8-8z'/><path fill='%231F4FD8' d='M42 46h5v10h-5zM51.5 41h5v20h-5zM61 44h5v14h-5z'/></svg>">
+<style>
+  :root { --blue:#1F4FD8; --blue-soft:#E8EEFC; --ink:#14181F; --muted:#5B6475; --line:#DDE2EA; --green:#1E8A4C; --green-soft:#E5F4EB; --amber:#B45309; --amber-soft:#FDF1E3; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#fff; color:var(--ink); font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; font-style:normal; }
+  main { max-width:720px; margin:0 auto; padding:28px 16px 48px; }
+  h1 { font-size:30px; margin:0 0 4px; letter-spacing:-.01em; }
+  h2 { font-size:19px; margin:32px 0 10px; }
+  p { margin:0 0 10px; }
+  .lead { color:var(--muted); font-size:17px; }
+  .card { border:1px solid var(--line); border-radius:16px; padding:16px; margin:14px 0; }
+  .btn { display:inline-block; background:var(--blue); color:#fff; text-decoration:none; font-weight:600; padding:13px 22px; border-radius:28px; }
+  .btn:focus-visible { outline:3px solid var(--blue-soft); outline-offset:2px; }
+  .small { color:var(--muted); font-size:14px; }
+  ol { padding-left:22px; margin:0; }
+  li { margin:0 0 8px; }
+  code { background:#F5F7FA; border:1px solid var(--line); border-radius:6px; padding:1px 6px; font-size:14px; }
+  .row { display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-top:1px solid var(--line); }
+  .row:first-child { border-top:0; }
+  .row span:last-child { text-align:right; }
+  .ok { color:var(--green); font-weight:600; } .bad { color:var(--amber); font-weight:600; }
+  .apps a { color:var(--blue); text-decoration:none; margin-right:14px; white-space:nowrap; }
+  em, i { font-style:normal; }
+</style>
+</head>
+<body>
+<main>
+  <h1>RecallDeutsch</h1>
+  <p class="lead">Random alarms during the day read out a few German verbs: the English meaning, a pause to answer aloud, then the German. Cards come from Verb Meister and Karteikasten and update by themselves.</p>
+
+  <div class="card">
+    <a class="btn" id="dl" href="RecallDeutsch.apk">Download the Android app</a>
+    <p class="small" id="ver" style="margin-top:10px">Android 8 or newer.</p>
+  </div>
+
+  <h2>Install on the phone</h2>
+  <ol>
+    <li>Open this page on the phone and tap <b>Download the Android app</b>.</li>
+    <li>Open the downloaded file. If the phone asks, allow your browser to <b>install unknown apps</b>, then tap Install.</li>
+    <li>Open RecallDeutsch → <b>Settings</b> → paste the Verb Meister sync key → <b>Save and sync</b>.</li>
+    <li>Go through the <b>Phone setup</b> checklist: notifications, alarms &amp; reminders, full-screen notifications, no battery restriction.</li>
+    <li>On Oppo / OnePlus: in App info → Battery, allow background activity and auto-launch. Then lock RecallDeutsch in Recent apps.</li>
+    <li>On the <b>Today</b> tab, switch Alarms on and try <b>Recall now</b>.</li>
+  </ol>
+  <p class="small" style="margin-top:10px">Updates: download again from this page and install over the old app. Your settings and progress stay.</p>
+
+  <h2>Server status</h2>
+  <div class="card" id="status"><p class="small">Checking…</p></div>
+
+  <h2>The other apps</h2>
+  <p class="apps">
+    <a href="https://sprintdeutsch.vercel.app/">SprintDeutsch</a>
+    <a href="https://karteikasten-vercel.vercel.app/">Karteikasten</a>
+    <a href="https://deutschtube.vercel.app/">DeutschTube</a>
+  </p>
+</main>
+<script>
+(async () => {
+  try {
+    const v = await fetch('version.json', { cache: 'no-store' }).then(r => r.json());
+    document.getElementById('ver').textContent = `Version ${v.versionName} · Android 8 or newer.`;
+  } catch (e) {}
+  const box = document.getElementById('status');
+  const row = (label, ok, text) => `<div class="row"><span>${label}</span><span class="${ok ? 'ok' : 'bad'}">${text}</span></div>`;
+  try {
+    const h = await fetch('api/health', { cache: 'no-store' }).then(r => r.json());
+    box.innerHTML =
+      row('Sync key set on Vercel', h.settings.SYNC_KEY, h.settings.SYNC_KEY ? 'yes' : 'missing') +
+      row('Gemini key set on Vercel', h.settings.GEMINI_API_KEY, h.settings.GEMINI_API_KEY ? 'yes' : 'missing') +
+      row('Verb Meister', h.verbmeister.ok, h.verbmeister.ok ? `${h.verbmeister.verbs} verbs` : 'not reachable') +
+      row('Karteikasten', h.karteikasten.ok, h.karteikasten.ok ? `${h.karteikasten.prepVerbs} verbs + ${h.karteikasten.adjectives} adjectives` : 'not reachable') +
+      row('Recall log storage', h.settings.BLOB_READ_WRITE_TOKEN, h.settings.BLOB_READ_WRITE_TOKEN ? 'connected' : 'not connected (optional)');
+  } catch (e) {
+    box.innerHTML = '<p class="small">The API is not reachable right now.</p>';
+  }
+})();
+</script>
+</body>
+</html>

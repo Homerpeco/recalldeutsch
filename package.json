@@ -1,0 +1,17 @@
+{
+  "name": "recalldeutsch",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "RecallDeutsch — API for the spoken verb-recall alarm app (cards, Gemini audio, recall log).",
+  "scripts": {
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {
+    "@breezystack/lamejs": "1.2.7",
+    "@vercel/blob": "2.8.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
