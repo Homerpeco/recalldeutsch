@@ -44,7 +44,7 @@
   <ol>
     <li>Open this page on the phone and tap <b>Download the Android app</b>.</li>
     <li>Open the downloaded file. If the phone asks, allow your browser to <b>install unknown apps</b>, then tap Install.</li>
-    <li>Open RecallDeutsch → <b>Settings</b> → paste the Verb Meister sync key → <b>Save and sync</b>.</li>
+    <li>Open RecallDeutsch → <b>Settings</b> → <b>Connect with Verb Meister</b>. The Connect page opens; tap <b>Open RecallDeutsch</b>. (On the Mac, open <a href="https://sprintdeutsch.vercel.app/recall-connect.html">the Connect page</a> and scan its QR code with the phone.)</li>
     <li>Go through the <b>Phone setup</b> checklist: notifications, alarms &amp; reminders, full-screen notifications, no battery restriction.</li>
     <li>On Oppo / OnePlus: in App info → Battery, allow background activity and auto-launch. Then lock RecallDeutsch in Recent apps.</li>
     <li>On the <b>Today</b> tab, switch Alarms on and try <b>Recall now</b>.</li>
@@ -73,7 +73,7 @@
     const h = await fetch('api/health', { cache: 'no-store' }).then(r => r.json());
     box.innerHTML =
       row('Sync key set on Vercel', h.settings.SYNC_KEY, h.settings.SYNC_KEY ? 'yes' : 'missing') +
-      row('Gemini key set on Vercel', h.settings.GEMINI_API_KEY, h.settings.GEMINI_API_KEY ? 'yes' : 'missing') +
+      row('German voice (Gemini)', true, h.settings.GEMINI_API_KEY ? 'own key' : 'via SprintDeutsch') +
       row('Verb Meister', h.verbmeister.ok, h.verbmeister.ok ? `${h.verbmeister.verbs} verbs` : 'not reachable') +
       row('Karteikasten', h.karteikasten.ok, h.karteikasten.ok ? `${h.karteikasten.prepVerbs} verbs + ${h.karteikasten.adjectives} adjectives` : 'not reachable') +
       row('Recall log storage', h.settings.BLOB_READ_WRITE_TOKEN, h.settings.BLOB_READ_WRITE_TOKEN ? 'connected' : 'not connected (optional)');
