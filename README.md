@@ -8,6 +8,9 @@ Spoken verb-recall alarms on Android. Fourth app next to SprintDeutsch, Karteika
 - **What one card sounds like (v1.1):** meaning in Spanish (Spanish voice) and/or English (English voice) → pause →
   German: infinitive (+ preposition and case) → 3rd person present, Präteritum, Perfekt → the examples from the database.
   Setting "Read the meaning in": Spanish + English (default) / Spanish / English.
+- **Recalled tab (v1.2):** every verb heard in recalls (last 7 days / 30 days / all), "didn't know" ones first,
+  with meaning, forms, preposition + case and (tap) the examples; "Recall the ones I didn't know" starts a session
+  with those cards (up to 15). The Today screen's "Last 7 days" panel names the "didn't know" verbs.
 - **API** (`api/`; files starting with `_` are shared code, not endpoints) on Vercel:
   - `GET /api/cards` — Verb Meister verbs (live from SprintDeutsch `/api/verbs`) + Karteikasten verbs with
     prepositions and adjectives (read from the live Karteikasten page). Header `x-sync-key`.
@@ -46,5 +49,5 @@ Signing key: `android/signing/` — never commit it, never lose it (updates must
 ## Tests
 - `node test/run.mjs` — API, 15 tests (Karteikasten extraction, German reading order, regular forms, cues,
   Gemini fallbacks, MP3, forwarding to SprintDeutsch).
-- `gradle :app:testDebugUnitTest` — 22 tests: planner, language detection, database mirror + v1→v2 upgrade, alarms,
-  notification, UI screenshots (`app/build/screens`).
+- `gradle :app:testDebugUnitTest` — 26 tests: planner, language detection, database mirror + v1→v2 upgrade, alarms,
+  notification, recall history, UI screenshots (`app/build/screens`).
