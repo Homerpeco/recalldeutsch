@@ -2,9 +2,13 @@
 
 Spoken verb-recall alarms on Android. Fourth app next to SprintDeutsch, Karteikasten and DeutschTube.
 
-- **Android app** (`android/`): Kotlin + Jetpack Compose. SQLite cache of all cards, randomised exact alarms
-  (`setAlarmClock`) inside waking hours, full-screen recall screen, batch size 1–15 (default 5), transient audio focus,
+- **Android app** (`android/`): Kotlin + Jetpack Compose. SQLite cache of all cards, exact alarms (`setAlarmClock`)
+  at the times the user sets, full-screen recall screen, batch size 1–15 (default 5), transient audio focus,
   optional voice commands, Oppo setup checklist.
+- **Alarm times (v1.3):** a list of fixed times in Settings; each time carries its own weekdays (every day / Mon–Fri /
+  Sat + Sun / single days), so class hours can be skipped. Today has "Pause the alarms" for 1 h, 2 h, 3 h or the rest
+  of the day — paused alarms become "skipped" and Resume plans the rest of the day again. Upgrading from v1.2 turns the
+  old random window (N alarms between start and end) into the same number of fixed times.
 - **What one card sounds like (v1.1):** meaning in Spanish (Spanish voice) and/or English (English voice) → pause →
   German: infinitive (+ preposition and case) → 3rd person present, Präteritum, Perfekt → the examples from the database.
   Setting "Read the meaning in": Spanish + English (default) / Spanish / English.
@@ -49,5 +53,5 @@ Signing key: `android/signing/` — never commit it, never lose it (updates must
 ## Tests
 - `node test/run.mjs` — API, 15 tests (Karteikasten extraction, German reading order, regular forms, cues,
   Gemini fallbacks, MP3, forwarding to SprintDeutsch).
-- `gradle :app:testDebugUnitTest` — 26 tests: planner, language detection, database mirror + v1→v2 upgrade, alarms,
-  notification, recall history, UI screenshots (`app/build/screens`).
+- `gradle :app:testDebugUnitTest` — 31 tests: planner and alarm times, language detection, database mirror + v1→v2
+  upgrade, alarms, pause/resume, notification, recall history, UI screenshots (`app/build/screens`).
