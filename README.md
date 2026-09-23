@@ -10,6 +10,10 @@ Spoken verb-recall alarms on Android. Fourth app next to SprintDeutsch, Karteika
   time, to skip it, or to let a skipped one ring after all, and "+ Add" puts an extra alarm in today — all for that day
   only, the repeating list is untouched. Upgrading from v1.2 turns the old random window (N alarms between start and
   end) into the same number of times.
+- **Shadowing (v1.5):** switch in Settings. After each example sentence: three beeps, then a pause as long as the
+  sentence took (Tight 100 % / Normal 130 % / Slow 170 %, plus 600 ms) so you can say it aloud without the next
+  sentence landing on top of you. `Planner.shadowPause`; the phone's German voice is used so each sentence can be
+  timed, and the screen marks the sentence with "Your turn — say it".
 - **What one card sounds like (v1.1):** meaning in Spanish (Spanish voice) and/or English (English voice) → pause →
   German: infinitive (+ preposition and case) → 3rd person present, Präteritum, Perfekt → the examples from the database.
   Setting "Read the meaning in": Spanish + English (default) / Spanish / English.
@@ -54,5 +58,5 @@ Signing key: `android/signing/` — never commit it, never lose it (updates must
 ## Tests
 - `node test/run.mjs` — API, 15 tests (Karteikasten extraction, German reading order, regular forms, cues,
   Gemini fallbacks, MP3, forwarding to SprintDeutsch).
-- `gradle :app:testDebugUnitTest` — 31 tests: planner and alarm times, language detection, database mirror + v1→v2
+- `gradle :app:testDebugUnitTest` — 33 tests: planner, alarm times and shadowing pauses, language detection, database mirror + v1→v2
   upgrade, alarms, moving/skipping one alarm, notification, recall history, UI screenshots (`app/build/screens`).
