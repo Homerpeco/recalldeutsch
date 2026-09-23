@@ -17,6 +17,11 @@ Spoken verb-recall alarms on Android. Fourth app next to SprintDeutsch, Karteika
   Every sentence is checked (`Planner.sayVerified`): if the voice fails or reports "done" too early, it is said again,
   the second time with an offline German voice; if it still cannot be said, the beeps and the pause come anyway
   (the sentence is on screen) — a sentence is never skipped. The screen marks it with "Your turn — say it".
+- **Selectable text (v1.7):** long-press any German (or Spanish/English) text on the recall screen, the Recalled tab and
+  the Cards tab to select it; the phone's menu then offers Copy, Select all and Translate (Google Translate). Done with
+  `SelectionContainer`; Compose 1.9's new text context menu (on by default) adds the phone's text actions such as
+  Translate. A normal tap still opens the examples / plays the German. Tests stub Android's magnifier (`NoMagnifier`),
+  which the simulator cannot draw.
 - **What one card sounds like (v1.1):** meaning in Spanish (Spanish voice) and/or English (English voice) → pause →
   German: infinitive (+ preposition and case) → 3rd person present, Präteritum, Perfekt → the examples from the database.
   Setting "Read the meaning in": Spanish + English (default) / Spanish / English.
