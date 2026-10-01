@@ -17,6 +17,10 @@ Spoken verb-recall alarms on Android. Fourth app next to SprintDeutsch, Karteika
   Every sentence is checked (`Planner.sayVerified`): if the voice fails or reports "done" too early, it is said again,
   the second time with an offline German voice; if it still cannot be said, the beeps and the pause come anyway
   (the sentence is on screen) — a sentence is never skipped. The screen marks it with "Your turn — say it".
+- **Shadowing the conjugation (v1.8):** cards that have a conjugation pattern (e.g. "träumt · träumte · hat geträumt")
+  get the same three beeps and pause after it is read; cards without one (adjectives, many verbs with a preposition)
+  don't. `logic/Script.kt` finds that line in the spoken script (exactly one line per card with forms, checked on the
+  whole card list). The recall buttons keep their labels on one line on narrow phones.
 - **Selectable text (v1.7):** long-press any German (or Spanish/English) text on the recall screen, the Recalled tab and
   the Cards tab to select it; the phone's menu then offers Copy, Select all and Translate (Google Translate). Done with
   `SelectionContainer`; Compose 1.9's new text context menu (on by default) adds the phone's text actions such as
@@ -66,5 +70,5 @@ Signing key: `android/signing/` — never commit it, never lose it (updates must
 ## Tests
 - `node test/run.mjs` — API, 15 tests (Karteikasten extraction, German reading order, regular forms, cues,
   Gemini fallbacks, MP3, forwarding to SprintDeutsch).
-- `gradle :app:testDebugUnitTest` — 35 tests: planner, alarm times and shadowing pauses, language detection, database mirror + v1→v2
+- `gradle :app:testDebugUnitTest` — 37 tests: planner, alarm times and shadowing pauses, language detection, database mirror + v1→v2
   upgrade, alarms, moving/skipping one alarm, notification, recall history, UI screenshots (`app/build/screens`).
