@@ -4,6 +4,7 @@
 // Both are fetched on every sync, so the phone mirrors whatever the two apps hold today.
 import vm from 'node:vm';
 import { createHash } from 'node:crypto';
+import { curatedCues, GLOSSARY_VERSION } from './_glossary.js';
 
 export const SPRINT_URL = (process.env.SPRINTDEUTSCH_URL || 'https://sprintdeutsch.vercel.app').replace(/\/$/, '');
 export const KARTEI_URL = (process.env.KARTEIKASTEN_URL || 'https://karteikasten-vercel.vercel.app/');
@@ -52,6 +53,66 @@ export function extractLiteral(html, name) {
   throw new Error(`"${name}" literal is not closed`);
 }
 
+// Strong and mixed verbs among Karteikasten's verbs with a preposition that its own irregular table lacks
+// (checked in the 2026-10-20 audit). Karteikasten verbs no longer borrow forms from Verb Meister: one wrong
+// entry there (vorbereiten "beritt vor") ended up on the card "sich vorbereiten auf". Regular Karteikasten
+// verbs get no forms, as before.
+export const KK_FORMS = {
+  abhängen: ['hängt ab', 'hing ab', 'abgehangen', 'haben'],
+  abhalten: ['hält ab', 'hielt ab', 'abgehalten', 'haben'],
+  abraten: ['rät ab', 'riet ab', 'abgeraten', 'haben'],
+  anfangen: ['fängt an', 'fing an', 'angefangen', 'haben'],
+  ankommen: ['kommt an', 'kam an', 'angekommen', 'sein'],
+  bewerben: ['bewirbt', 'bewarb', 'beworben', 'haben'],
+  nachdenken: ['denkt nach', 'dachte nach', 'nachgedacht', 'haben'],
+  teilnehmen: ['nimmt teil', 'nahm teil', 'teilgenommen', 'haben'],
+  abbringen: ['bringt ab', 'brachte ab', 'abgebracht', 'haben'],
+  abgeben: ['gibt ab', 'gab ab', 'abgegeben', 'haben'],
+  absehen: ['sieht ab', 'sah ab', 'abgesehen', 'haben'],
+  anrufen: ['ruft an', 'rief an', 'angerufen', 'haben'],
+  ansehen: ['sieht an', 'sah an', 'angesehen', 'haben'],
+  ausgeben: ['gibt aus', 'gab aus', 'ausgegeben', 'haben'],
+  ausgehen: ['geht aus', 'ging aus', 'ausgegangen', 'sein'],
+  aussehen: ['sieht aus', 'sah aus', 'ausgesehen', 'haben'],
+  aussprechen: ['spricht aus', 'sprach aus', 'ausgesprochen', 'haben'],
+  beschreiben: ['beschreibt', 'beschrieb', 'beschrieben', 'haben'],
+  einschwören: ['schwört ein', 'schwor ein', 'eingeschworen', 'haben'],
+  ernennen: ['ernennt', 'ernannte', 'ernannt', 'haben'],
+  erschrecken: ['erschrickt', 'erschrak', 'erschrocken', 'sein'],   // intransitive: "Ich bin erschrocken."
+  raten: ['rät', 'riet', 'geraten', 'haben'],
+  verstoßen: ['verstößt', 'verstieß', 'verstoßen', 'haben'],
+};
+const kkFormsLookup = (bare, reflexive) => {
+  const f = KK_FORMS[bare];
+  return f ? threeForms({ present: f[0], preterite: f[1], partizip: f[2], auxiliary: f[3] }, reflexive) : null;
+};
+
+// Verb Meister examples often carry the learner's own translation: "Ich träume jede Nacht. (I dream every
+// night.)", a one-word gloss inside the sentence ("eine Ausrede (excusa) erfunden"), or an English sentence
+// after the German one. The German voice must not read those, so they are split off: the sentence keeps the
+// German only, and the translation of the first example becomes the card's English example line.
+const EN_WORDS = /\b(?:I|I'm|I've|you|you're|your|the|is|are|was|were|have|has|had|do|does|don't|did|will|would|with|my|me|he's|she's|it's|they|we|this|that|of|to|in|on|for|and|every|again|ever|which|one)\b/gi;
+const DE_WORDS = /\b(?:ich|du|er|sie|es|wir|ihr|der|die|das|den|dem|des|ein|eine|einen|einem|und|ist|nicht|mit|auf|zu|von|sich|mich|dich|hat|habe|bin|sind)\b/gi;
+const looksEnglish = s => {
+  const en = (s.match(EN_WORDS) || []).length, de = (s.match(DE_WORDS) || []).length;
+  return en >= 2 && de === 0;
+};
+export function splitExample(raw) {
+  let s = clean(raw), tr = '';
+  const m = /^(.*\S)\s*\(([^()]+)\)\s*[.!?]?$/.exec(s);                 // trailing "(translation)"
+  if (m && /[A-Za-zÄÖÜäöüß]/.test(m[1])) { s = m[1]; tr = clean(m[2]); }
+  s = clean(s.replace(/\s*\([^()]*\)/g, ' '));                           // glosses inside the sentence
+  if (!tr) {                                                             // "German. English sentence."
+    const parts = s.match(/[^.!?]+[.!?]+["“”»]?|[^.!?]+$/g) || [s];
+    if (parts.length > 1 && looksEnglish(parts[parts.length - 1])) {
+      tr = clean(parts.pop());
+      s = clean(parts.join(' '));
+    }
+  }
+  s = s.replace(/\s+([?!.,;:])/g, '$1');                                 // "verliebt ?" → "verliebt?"
+  return { de: endSentence(s), tr };
+}
+
 function examplesFor(examples, key) {
   const pairs = examples && Array.isArray(examples[key]) ? examples[key] : [];
   return pairs.map(p => ({ de: endSentence(stripTags(p && p[0])), en: stripTags(p && p[1]) })).filter(p => p.de);
@@ -82,7 +143,9 @@ export function regularForms(infinitive, { separable = false, prefix = '' } = {}
   else if (/en$/.test(core)) stem = core.slice(0, -2);
   else if (/n$/.test(core)) stem = core.slice(0, -1);
   else stem = core;
-  const eEp = /(?:[td]|chn|ffn|gn|dm|tm)$/.test(stem) ? 'e' : '';  // arbeitet, öffnet, atmet
+  // e before -t after d/t, and after a consonant + m/n other than l, r, h (arbeitet, öffnet, atmet, ordnet,
+  // rechnet, trocknet, regnet) — but lernt, wohnt, qualmt. Verb Meister's rule missed -dn (zuordnen → "ordnt").
+  const eEp = /(?:[td]|chn|[bdfgkpt]n|[bdfgkpt]m)$/.test(stem) ? 'e' : '';
   const sEnd = /(?:s|ß|x|z)$/.test(stem);                          // reist, not reisst
   const present3 = stem + (sEnd ? 't' : eEp + 't');
   const pret3 = stem + eEp + 'te';
@@ -141,7 +204,7 @@ function germanScript({ infinitivePart, forms, examples }) {
   return parts.filter(Boolean).join('\n');
 }
 
-export function karteikastenCards(html, { formsFor = () => null } = {}) {
+export function karteikastenCards(html, { formsFor = kkFormsLookup } = {}) {
   const preps = extractLiteral(html, 'prepositionsDB');
   const adjs = extractLiteral(html, 'adjectivesDB');
   let examples = {};
@@ -160,8 +223,8 @@ export function karteikastenCards(html, { formsFor = () => null } = {}) {
     const bare = head.replace(/^sich\s+/i, '').toLowerCase();
     const kk = kkIrregular.get(bare);
     if (kk) return threeForms(kk, refl);
-    const fromVm = formsFor(bare, refl);
-    return fromVm && fromVm.length ? fromVm : [];
+    const curated = formsFor(bare, refl);
+    return curated && curated.length ? curated : [];
   };
 
   const out = [];
@@ -217,7 +280,8 @@ export function verbMeisterCard(v) {
     .map(p => ({ prep: cleanPrep(p && p.prep), kase: caseDe(p && p.case) }))
     .filter(p => p.prep);
   const forms = verbMeisterForms(v);
-  const examples = (Array.isArray(v.examples) ? v.examples : []).map(endSentence).filter(Boolean).slice(0, 3);
+  const split = (Array.isArray(v.examples) ? v.examples : []).map(splitExample).filter(e => e.de).slice(0, 3);
+  const examples = split.map(e => e.de);
 
   // "sich freuen auf. Akkusativ. Und über. Akkusativ."
   const infinitivePart = preps.length
@@ -235,7 +299,7 @@ export function verbMeisterCard(v) {
     forms: forms.join(' · '),
     prepLine: preps.map(p => p.kase ? `${p.prep} + ${p.kase}` : p.prep).join('  ·  '),
     examples,
-    exampleEn: '',
+    exampleEn: split[0] ? split[0].tr : '',
     speakDe: germanScript({ infinitivePart, forms, examples }),
     box: Math.min(6, Math.max(1, box)),
   });
@@ -257,7 +321,9 @@ function finish(card) {
   card.exampleDe = card.examples[0] || '';                         // for app v1.0
   card.speakEn = spokenEnglish(card.prompt);
   card.audioKey = hash(card.speakDe);                              // German text changed → re-record
-  card.cueKey = hash(card.deck + '|' + card.answer + '|' + card.prompt);   // meaning changed → new cues
+  // meaning changed → new cues; teacher-checked cues carry the glossary version, so an update reaches the phone
+  card.cueKey = hash(card.deck + '|' + card.answer + '|' + card.prompt
+    + (curatedCues(card.id, card.prompt) ? '|gloss' + GLOSSARY_VERSION : ''));
   return card;
 }
 
@@ -285,23 +351,8 @@ export async function loadVerbMeisterRaw(key, fetchImpl = fetch) {
   return Array.isArray(doc && doc.verbs) ? doc.verbs : [];
 }
 
-/** Karteikasten verbs borrow the three forms from Verb Meister when the same verb is there. */
-function vmFormsLookup(verbs) {
-  const map = new Map();
-  for (const v of verbs || []) {
-    if (!v || !clean(v.infinitive)) continue;
-    map.set(clean(v.infinitive).toLowerCase().replace(/^sich\s+/, ''), v);
-  }
-  // Only stored (irregular) forms are borrowed: a regular derivation could belong to another sense of the
-  // same word (abhängen: "hängte ab" = to detach, but "abhängen von" = "hing ab").
-  return (bare, reflexive) => {
-    const v = map.get(bare);
-    return v && v.irregular && v.conj ? verbMeisterForms({ ...v, reflexive: reflexive || !!v.reflexive }) : null;
-  };
-}
-
-export async function loadKarteikasten(fetchImpl = fetch, vmVerbs = []) {
-  return karteikastenCards(await fetchKarteikastenHtml(fetchImpl), { formsFor: vmFormsLookup(vmVerbs) });
+export async function loadKarteikasten(fetchImpl = fetch) {
+  return karteikastenCards(await fetchKarteikastenHtml(fetchImpl));
 }
 
 export async function loadVerbMeister(key, fetchImpl = fetch) {
@@ -316,7 +367,7 @@ export async function loadAllCards(key, fetchImpl = fetch) {
   let vmCards = [], kkCards = [], vmErr = null, kkErr = null;
   if (vmR.status === 'fulfilled') vmCards = vmVerbs.map(verbMeisterCard).filter(Boolean); else vmErr = vmR.reason;
   if (htmlR.status === 'fulfilled') {
-    try { kkCards = karteikastenCards(htmlR.value, { formsFor: vmFormsLookup(vmVerbs) }); } catch (e) { kkErr = e; }
+    try { kkCards = karteikastenCards(htmlR.value); } catch (e) { kkErr = e; }
   } else kkErr = htmlR.reason;
   const msg = e => String(e && e.message || e);
   const sources = {
