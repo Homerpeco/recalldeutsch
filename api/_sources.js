@@ -5,6 +5,7 @@
 import vm from 'node:vm';
 import { createHash } from 'node:crypto';
 import { curatedCues, GLOSSARY_VERSION } from './_glossary.js';
+import { translateExample } from './_translations.js';
 
 export const SPRINT_URL = (process.env.SPRINTDEUTSCH_URL || 'https://sprintdeutsch.vercel.app').replace(/\/$/, '');
 export const KARTEI_URL = (process.env.KARTEIKASTEN_URL || 'https://karteikasten-vercel.vercel.app/');
@@ -255,7 +256,8 @@ function prepCard({ id, deck, head, prep, kase, meaning, examples, forms }) {
     forms: forms.join(' · '),
     prepLine,
     examples: examples.map(e => e.de),
-    exampleEn: examples[0] ? examples[0].en : '',
+    // one English line per example, same order (display only — never part of speakDe)
+    examplesEn: examples.map(e => e.en || translateExample(e.de)),
     speakDe: germanScript({
       infinitivePart: cDe ? `${answer}. ${cDe}.` : `${answer}.`,   // "sich freuen auf. Akkusativ."
       forms,
@@ -282,6 +284,8 @@ export function verbMeisterCard(v) {
   const forms = verbMeisterForms(v);
   const split = (Array.isArray(v.examples) ? v.examples : []).map(splitExample).filter(e => e.de).slice(0, 3);
   const examples = split.map(e => e.de);
+  // English per example: the learner's own inline translation first, else the checked table in _translations.js.
+  const examplesEn = split.map(e => e.tr || translateExample(e.de));
 
   // "sich freuen auf. Akkusativ. Und über. Akkusativ."
   const infinitivePart = preps.length
@@ -299,7 +303,7 @@ export function verbMeisterCard(v) {
     forms: forms.join(' · '),
     prepLine: preps.map(p => p.kase ? `${p.prep} + ${p.kase}` : p.prep).join('  ·  '),
     examples,
-    exampleEn: split[0] ? split[0].tr : '',
+    examplesEn,
     speakDe: germanScript({ infinitivePart, forms, examples }),
     box: Math.min(6, Math.max(1, box)),
   });
@@ -319,6 +323,9 @@ export function spokenEnglish(s) {
 function finish(card) {
   card.lines = [card.forms, card.prepLine].filter(Boolean);      // for app v1.0
   card.exampleDe = card.examples[0] || '';                         // for app v1.0
+  // examplesEn is parallel to examples ('' where there is no translation). exampleEn = the first one, for app ≤ 1.8.
+  card.examplesEn = card.examples.map((_, i) => String((card.examplesEn || [])[i] || ''));
+  card.exampleEn = card.examplesEn[0] || '';
   card.speakEn = spokenEnglish(card.prompt);
   card.audioKey = hash(card.speakDe);                              // German text changed → re-record
   // meaning changed → new cues; teacher-checked cues carry the glossary version, so an update reaches the phone
